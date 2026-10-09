@@ -39,9 +39,18 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          # Only used to diagnose a common mistake (values added under "Variables" instead of "Secrets").
+          VAR_B64_SET: ${{ vars.KEYSTORE_BASE64 != '' }}
+          VAR_PASS_SET: ${{ vars.KEYSTORE_PASSWORD != '' }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
-            echo "::error::Repository secrets KEYSTORE_BASE64 and KEYSTORE_PASSWORD are not set (see README)."
+            echo "secret KEYSTORE_BASE64: ${#KEYSTORE_BASE64} chars, secret KEYSTORE_PASSWORD: ${#KEYSTORE_PASSWORD} chars"
+            echo "variable KEYSTORE_BASE64 set: $VAR_B64_SET, variable KEYSTORE_PASSWORD set: $VAR_PASS_SET"
+            if [ "$VAR_B64_SET" = "true" ] || [ "$VAR_PASS_SET" = "true" ]; then
+              echo "::error title=Signing key::The values were added as Actions *Variables*. Delete them and add them as Actions *Secrets* (Settings > Secrets and variables > Actions > Secrets tab)."
+            else
+              echo "::error title=Signing key::Repository secrets KEYSTORE_BASE64 / KEYSTORE_PASSWORD not found (b64=${#KEYSTORE_BASE64}, pass=${#KEYSTORE_PASSWORD} chars). Add them under Settings > Secrets and variables > Actions > Secrets > New repository secret (not Codespaces/Dependabot/Environment)."
+            fi
             exit 1
           fi
           mkdir -p signing
