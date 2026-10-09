@@ -21,7 +21,7 @@ jobs:
     env:
       TOOLCHAIN: ${{ github.workspace }}/../tc
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Cache toolchain
         uses: actions/cache@v4
@@ -30,10 +30,10 @@ jobs:
           key: toolchain-v1-${{ hashFiles('tools/setup-toolchain.sh') }}
 
       - name: Install toolchain
-        run: ./tools/setup-toolchain.sh
+        run: ./tools/ci-step.sh "Toolchain" ./tools/setup-toolchain.sh
 
       - name: Unit tests
-        run: ./tools/run-tests.sh
+        run: ./tools/ci-step.sh "Unit tests" ./tools/run-tests.sh
 
       - name: Restore signing key from secrets
         env:
@@ -51,7 +51,7 @@ jobs:
       - name: Build signed APK
         env:
           REQUIRE_SIGNING_KEY: "true"
-        run: ./build.sh
+        run: ./tools/ci-step.sh "Build" ./build.sh
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
