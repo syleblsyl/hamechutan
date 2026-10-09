@@ -22,6 +22,14 @@ for f in "$ANDROID_JAR" "$AAPT2" "$R8_JAR" "$KOTLINC" "$STDLIB"; do
   [ -e "$f" ] || { echo "Missing toolchain file: $f (run tools/setup-toolchain.sh)"; exit 1; }
 done
 
+# Release builds must talk to the license server (see server/license/README.md).
+if [ "${REQUIRE_LICENSE:-false}" = "true" ]; then
+  CFG=app/src/main/java/il/hamechutan/app/platform/LicenseConfig.kt
+  if ! grep -q 'SERVER_URL = "https://script.google.com/macros/s/' "$CFG" || ! grep -q 'PUBLIC_KEY = "MII' "$CFG"; then
+    echo "ERROR: $CFG has no license server URL / public key. Run tools/license-keys.sh <web-app-url>."; exit 1
+  fi
+fi
+
 SRC=app/src/main
 OUT=build/apk
 rm -rf "$OUT"; mkdir -p "$OUT"/{gen,rclasses,kclasses,dex} build/outputs

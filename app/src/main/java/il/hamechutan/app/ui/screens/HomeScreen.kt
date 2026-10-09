@@ -78,7 +78,7 @@ class HomeScreen(act: MainActivity) : Screen(act) {
     private fun welcome(c: LinearLayout) {
         val card = ui.card(18, 16, color = p.goldSoft, stroke = null)
         card.addView(ui.tv("ברוכים הבאים למחותן", TS.SUBTITLE))
-        card.addView(ui.tv("כדאי להתחיל בהגדרת תקציב, הוספת הספקים שכבר סגרתם איתם ורשימת המשימות. כל המידע נשמר בטלפון בלבד, ללא אינטרנט וללא הרשמה.", TS.CAPTION, p.text2), ui.lp(top = 6))
+        card.addView(ui.tv("כדאי להתחיל בהגדרת תקציב, הוספת הספקים שכבר סגרתם איתם ורשימת המשימות. כל המידע נשמר בטלפון בלבד ואינו נשלח לשום מקום.", TS.CAPTION, p.text2), ui.lp(top = 6))
         val r1 = ui.row().apply { layoutParams = ui.lp(MATCH, WRAP, top = 12) }
         r1.addView(ui.button("הגדרת תקציב", BtnKind.PRIMARY, small = true) { push(BudgetScreen(act)) }, ui.lp(0, WRAP, 1f))
         r1.addView(ui.hspace(8))

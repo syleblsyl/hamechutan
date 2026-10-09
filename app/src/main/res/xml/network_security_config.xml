@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The only network traffic is the subscription check. User-installed certificates are trusted so the app
+  works behind Israeli content filters (Netfree, Rimon, Etrog) that inspect HTTPS with their own certificate.
+  This is safe because every answer from the license server is RSA-signed and verified in the app:
+  an intercepting proxy can block the check, but cannot forge an approval.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

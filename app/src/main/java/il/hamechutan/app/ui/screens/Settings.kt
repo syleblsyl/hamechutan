@@ -73,6 +73,24 @@ class SettingsScreen(act: MainActivity) : Screen(act) {
         })
         c.addView(remCard)
 
+        if (app.license.enabled) {
+            c.addView(ui.sectionHeader("מנוי"))
+            val sub = ui.card()
+            val st = app.license.state()
+            if (st != null) {
+                sub.addView(ui.kv("שם משתמש", st.username))
+                sub.addView(ui.kv("הטלפון הזה", app.license.deviceName))
+                sub.addView(ui.kv("נבדק לאחרונה", Dates.displayDateTime(st.verifiedAt)))
+                sub.addView(ui.kv("תוקף המנוי", if (st.expires.isEmpty()) "ללא הגבלה" else Dates.display(st.expires)))
+            }
+            sub.addView(ui.tv("האפליקציה בודקת את המנוי באינטרנט מדי פעם. בלי חיבור היא ממשיכה לעבוד עד ${app.license.offlineDays} ימים מהבדיקה האחרונה. " +
+                "לשרת נשלחים רק שם המשתמש ומזהה הטלפון. למעבר לטלפון חדש פנו למוכר.", TS.SMALL, p.text3), ui.lp(top = 6, bottom = 8))
+            sub.addView(ui.button("בדיקת המנוי עכשיו", BtnKind.TONAL, R.drawable.ic_check_circle, small = true) {
+                ui.toast("בודק…"); act.checkLicenseNow { refresh() }
+            }, ui.lp(WRAP, WRAP))
+            c.addView(sub)
+        }
+
         c.addView(ui.sectionHeader("אבטחה"))
         val sec = ui.listCard()
         val pinOn = app.pin.isEnabled
@@ -133,7 +151,8 @@ class SettingsScreen(act: MainActivity) : Screen(act) {
         about.addView(ui.kv("מכשיר", "Android ${Build.VERSION.RELEASE} · API ${Build.VERSION.SDK_INT}"))
         about.addView(ui.kv("ספקים / הוצאות / משימות", "${repo.suppliers().size} / ${repo.expenses().size} / ${repo.tasks().size}"))
         about.addView(ui.kv("מסמכים", "${repo.documents().size}"))
-        about.addView(ui.tv("כל המידע נשמר במכשיר בלבד. האפליקציה אינה משתמשת באינטרנט ואין לה הרשאת גישה לרשת.", TS.SMALL, p.text3), ui.lp(top = 6))
+        about.addView(ui.tv(if (app.license.enabled) "כל נתוני החתונה נשמרים במכשיר בלבד ואינם נשלחים לשום מקום. החיבור לאינטרנט משמש רק לבדיקת המנוי."
+            else "כל המידע נשמר במכשיר בלבד.", TS.SMALL, p.text3), ui.lp(top = 6))
         about.addView(ui.tv("גופן: Heebo (רישיון SIL Open Font License).", TS.SMALL, p.text3), ui.lp(top = 2))
         c.addView(about)
         return sv

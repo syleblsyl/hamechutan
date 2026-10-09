@@ -25,6 +25,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import il.hamechutan.app.R
 import il.hamechutan.app.core.data.Repo
+import il.hamechutan.app.core.license.LicenseManager
 import il.hamechutan.app.platform.App
 import il.hamechutan.app.platform.CrashLog
 import il.hamechutan.app.ui.screens.*
@@ -51,6 +52,9 @@ class MainActivity : Activity() {
     private lateinit var bottomNav: LinearLayout
     private var fabView: View? = null
     private var lockView: View? = null
+    /** Subscription overlay (login / periodic online check); always above the PIN lock. */
+    private var licenseView: View? = null
+    private var licenseRefreshRunning = false
 
     val stack = ArrayList<Screen>()
     var currentTab = Tab.HOME
@@ -85,6 +89,7 @@ class MainActivity : Activity() {
         if (intent?.getBooleanExtra(STATE_SETTINGS, false) == true) push(SettingsScreen(this))
         if (app.pin.isEnabled && !skipLockOnce) showLock()
         skipLockOnce = false
+        applyLicenseGate()
         handleIntent(intent)
         handleOrphanCameraResult()
     }
@@ -258,7 +263,7 @@ class MainActivity : Activity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (lockView != null) { moveTaskToBack(true); return }
+        if (lockView != null || licenseView != null) { moveTaskToBack(true); return }
         val s = stack.lastOrNull() ?: return super.onBackPressed()
         if (s.onBack()) return
         if (s.isDirty()) {
@@ -282,6 +287,7 @@ class MainActivity : Activity() {
             val timeout = app.prefs.lockTimeoutSec * 1000L
             if ((!suppressed && away >= timeout) || away > 10 * 60_000L) showLock()
         }
+        if (started) applyLicenseGate()
         if (started) refresh()
         started = true
     }
@@ -312,10 +318,67 @@ class MainActivity : Activity() {
         lockView = null
         suppressLockUntil = 0
         refresh()
+        openPendingIfUnlocked()
+    }
+
+    private fun openPendingIfUnlocked() {
+        if (isLocked) return
         pendingOpen?.let { (t, id) -> pendingOpen = null; openTarget(t, id) }
     }
 
-    val isLocked: Boolean get() = lockView != null
+    val isLocked: Boolean get() = lockView != null || licenseView != null
+
+    // ------------------------------------------------------------------ subscription
+
+    /** Shows the login / online-check overlay when needed; refreshes the subscription in the background when due. */
+    fun applyLicenseGate() {
+        when (val g = app.license.gate()) {
+            is LicenseManager.Gate.Open -> {
+                if (licenseView != null) closeLicense()
+                if (app.license.needsRefresh()) refreshLicenseInBackground()
+            }
+            is LicenseManager.Gate.Login -> showLicense(LicenseScreen.Mode.Login(g.notice))
+            is LicenseManager.Gate.Verify -> showLicense(LicenseScreen.Mode.Verify(g.reason))
+        }
+    }
+
+    private fun showLicense(mode: LicenseScreen.Mode) {
+        if (licenseView != null) return
+        ui.hideKeyboard(currentFocus)
+        val v = LicenseScreen(this, mode) { closeLicense() }.build()
+        licenseView = v
+        root.addView(v, FrameLayout.LayoutParams(MATCH, MATCH))
+    }
+
+    private fun closeLicense() {
+        licenseView?.let { root.removeView(it) }
+        licenseView = null
+        refresh()
+        openPendingIfUnlocked()
+    }
+
+    private fun refreshLicenseInBackground() {
+        if (licenseRefreshRunning) return
+        licenseRefreshRunning = true
+        app.background({ app.license.verify() }) { r ->
+            licenseRefreshRunning = false
+            val res = r.getOrNull()
+            if (res is LicenseManager.Result.Refused && res.revoked) showLicense(LicenseScreen.Mode.Login(res.message))
+        }
+    }
+
+    /** "Check now" from the settings screen. */
+    fun checkLicenseNow(done: () -> Unit) {
+        app.background({ app.license.verify() }) { r ->
+            when (val res = r.getOrNull()) {
+                LicenseManager.Result.Ok -> ui.toast("המנוי תקין")
+                is LicenseManager.Result.Refused -> if (res.revoked) showLicense(LicenseScreen.Mode.Login(res.message)) else ui.alert("בדיקת המנוי", res.message)
+                is LicenseManager.Result.Offline -> ui.alert("לא ניתן לבדוק כרגע", res.message)
+                null -> ui.alert("שגיאה", r.exceptionOrNull()?.message ?: "")
+            }
+            done()
+        }
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
 import il.hamechutan.app.core.data.Repo
+import il.hamechutan.app.core.license.LicenseManager
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -19,6 +20,7 @@ class App : Application() {
     lateinit var scheduler: ReminderScheduler
     lateinit var prefs: Prefs
     lateinit var pin: PinManager
+    lateinit var license: LicenseManager
 
     /** Background thread for heavy work (backup, restore, PDF, image processing). */
     val io: ExecutorService = Executors.newSingleThreadExecutor()
@@ -32,6 +34,7 @@ class App : Application() {
         repo = Repo(AndroidSqlDb(DbHelper(this).writableDatabase))
         files = DocFiles(this)
         pin = PinManager(getSharedPreferences("security", Context.MODE_PRIVATE))
+        license = LicenseSetup.create(this, VERSION_NAME)
         scheduler = ReminderScheduler(this)
         Notifier.ensureChannel(this)
         repo.onChange = { scheduler.sync() } // synchronous so shown reminder status is always current

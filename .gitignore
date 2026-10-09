@@ -4,3 +4,4 @@ signing/
 local.properties
 *.iml
 .idea/
+license-keys/

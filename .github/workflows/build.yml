@@ -1,6 +1,7 @@
 # Builds, tests and signs the APK on every push to main.
-# When version.properties has a version that has no GitHub Release yet, a release "v<version>"
-# is created with the APK attached — that is how the app is updated on the phone.
+# When version.properties has a version that has no release yet, a release "v<version>" with the APK is
+# published in the PUBLIC downloads repository (RELEASES_REPO) — the source code repository is private.
+# Secrets: KEYSTORE_BASE64, KEYSTORE_PASSWORD (signing key), RELEASES_TOKEN (write access to RELEASES_REPO).
 name: Build APK
 
 on:
@@ -20,6 +21,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       TOOLCHAIN: ${{ github.workspace }}/../tc
+      RELEASES_REPO: syleblsyl/hamechutan-releases
     steps:
       - uses: actions/checkout@v5
 
@@ -28,6 +30,10 @@ jobs:
         with:
           path: ${{ github.workspace }}/../tc
           key: toolchain-v1-${{ hashFiles('tools/setup-toolchain.sh') }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Install toolchain
         run: ./tools/ci-step.sh "Toolchain" ./tools/setup-toolchain.sh
@@ -60,6 +66,7 @@ jobs:
       - name: Build signed APK
         env:
           REQUIRE_SIGNING_KEY: "true"
+          REQUIRE_LICENSE: "true"
         run: ./tools/ci-step.sh "Build" ./build.sh
 
       - name: Upload APK artifact
@@ -71,16 +78,21 @@ jobs:
       - name: Publish release for a new version
         if: github.ref == 'refs/heads/main'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
         run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error title=Releases::Repository secret RELEASES_TOKEN is not set (see README: publishing)."
+            exit 1
+          fi
           V=$(grep '^versionName=' version.properties | cut -d= -f2 | tr -d '[:space:]')
-          if gh release view "v$V" >/dev/null 2>&1; then
-            echo "Release v$V already exists — bump version.properties to publish a new one."
+          if gh release view "v$V" -R "$RELEASES_REPO" >/dev/null 2>&1; then
+            echo "Release v$V already exists in $RELEASES_REPO — bump version.properties to publish a new one."
             exit 0
           fi
           awk -v v="$V" '$0 ~ "^## "v {f=1; next} /^## / {f=0} f' CHANGELOG.md > notes.md
           [ -s notes.md ] || echo "גרסה $V" > notes.md
-          gh release create "v$V" "build/outputs/HaMechutan-$V.apk" --title "המחותן $V" --notes-file notes.md
+          ./tools/ci-step.sh "Publish" gh release create "v$V" "build/outputs/HaMechutan-$V.apk" -R "$RELEASES_REPO" \
+            --title "המחותן $V" --notes-file notes.md
 
       - name: Remove signing key
         if: always()
