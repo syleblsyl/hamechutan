@@ -9,7 +9,7 @@ cd "$TC"
 echo "== Ubuntu packages (JDK, signing tools, test libraries)"
 sudo apt-get update -qq
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openjdk-21-jdk-headless zip unzip zipalign apksigner \
-  junit4 libxerial-sqlite-jdbc-java libslf4j-java libandroid-json-org-java
+  junit4 libxerial-sqlite-jdbc-java libxerial-sqlite-jdbc-jni libslf4j-java libandroid-json-org-java
 
 echo "== Kotlin compiler 2.0.21"
 [ -d kotlinc ] || { curl -sSL -o kotlin.zip https://github.com/JetBrains/kotlin/releases/download/v2.0.21/kotlin-compiler-2.0.21.zip && unzip -q kotlin.zip && rm kotlin.zip; }

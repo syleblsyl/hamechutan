@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs the JVM unit tests of the pure-Kotlin core (business logic, database, backup, reports)
 # against a real SQLite engine (xerial sqlite-jdbc). Requires the toolchain from tools/setup-toolchain.sh
-# and Ubuntu packages: junit4 libxerial-sqlite-jdbc-java libslf4j-java libandroid-json-org-java
+# and Ubuntu packages: junit4 libxerial-sqlite-jdbc-java libxerial-sqlite-jdbc-jni libslf4j-java libandroid-json-org-java
 set -euo pipefail
 cd "$(dirname "$0")/.."
 TC="${TOOLCHAIN:-/opt/tc}"
@@ -23,6 +23,11 @@ echo "== compiling core + tests"
 
 TESTS=$(cd "$OUT/classes" && find . -name '*Test.class' | sed 's|^\./||; s|\.class$||; s|/|.|g' | sort)
 echo "== running: $TESTS"
-java -cp "$OUT/classes:app/src/test/resources:$CP:$TC/kotlinc/lib/kotlin-stdlib.jar:$TC/android-34.jar" org.junit.runner.JUnitCore $TESTS 2>&1 \
+# Ubuntu's sqlite-jdbc ships its native part separately (libxerial-sqlite-jdbc-jni). Point to it explicitly:
+# JDKs that are not from the Ubuntu archive (e.g. Temurin on GitHub runners) do not search that folder.
+JNI_DIR=/usr/lib/$(uname -m)-linux-gnu/jni
+[ -f "$JNI_DIR/libsqlitejdbc.so" ] || { echo "Missing $JNI_DIR/libsqlitejdbc.so (apt install libxerial-sqlite-jdbc-jni)"; exit 1; }
+java -Dorg.sqlite.lib.path="$JNI_DIR" -Dorg.sqlite.lib.name=libsqlitejdbc.so \
+  -cp "$OUT/classes:app/src/test/resources:$CP:$TC/kotlinc/lib/kotlin-stdlib.jar:$TC/android-34.jar" org.junit.runner.JUnitCore $TESTS 2>&1 \
   | grep -v "^Picked up JAVA_TOOL_OPTIONS" | tee "$OUT/results.txt"
 grep -q "^OK (" "$OUT/results.txt"
