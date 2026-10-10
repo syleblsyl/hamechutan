@@ -373,7 +373,7 @@ class MainActivity : Activity() {
             when (val res = r.getOrNull()) {
                 LicenseManager.Result.Ok -> ui.toast("המנוי תקין")
                 is LicenseManager.Result.Refused -> if (res.revoked) showLicense(LicenseScreen.Mode.Login(res.message)) else ui.alert("בדיקת המנוי", res.message)
-                is LicenseManager.Result.Offline -> ui.alert("לא ניתן לבדוק כרגע", res.message)
+                is LicenseManager.Result.Offline -> ui.alert("לא ניתן לבדוק כרגע", if (res.detail.isBlank()) res.message else "${res.message}\n\n(${res.detail})")
                 null -> ui.alert("שגיאה", r.exceptionOrNull()?.message ?: "")
             }
             done()

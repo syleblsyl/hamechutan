@@ -125,9 +125,9 @@ class LicenseTest {
         val before = store.s
         now += day
         server.fail = java.net.UnknownHostException("script.google.com")
-        assertEquals(LicenseManager.Result.Offline(LicenseText.network(NetProblem.NO_CONNECTION)), m.verify())
+        assertEquals(LicenseText.network(NetProblem.NO_CONNECTION), (m.verify() as LicenseManager.Result.Offline).message)
         server.fail = java.net.SocketTimeoutException("slow")
-        assertEquals(LicenseManager.Result.Offline(LicenseText.network(NetProblem.TIMEOUT)), m.verify())
+        assertEquals(LicenseText.network(NetProblem.TIMEOUT), (m.verify() as LicenseManager.Result.Offline).message)
         server.fail = javax.net.ssl.SSLHandshakeException("filter certificate")
         assertTrue((m.verify() as LicenseManager.Result.Offline).message.contains("מסונן"))
         server.fail = null
@@ -245,15 +245,29 @@ class LicenseTest {
             ex.sendResponseHeaders(403, b.size.toLong()); ex.responseBody.use { it.write(b) }
         }
         http.createContext("/broken") { ex -> ex.sendResponseHeaders(500, -1); ex.close() }
+        // The request is accepted but the answer (after Google's redirect) never comes: a filter holding the reply host
+        http.createContext("/exec-held") { ex ->
+            ex.requestBody.readBytes()
+            ex.responseHeaders.add("Location", "http://localhost:$port/held")
+            ex.sendResponseHeaders(302, -1); ex.close()
+        }
+        http.createContext("/held") { ex -> Thread.sleep(2500); ex.sendResponseHeaders(500, -1); ex.close() }
+        http.executor = java.util.concurrent.Executors.newFixedThreadPool(4)
         http.start()
         try {
             fun m(path: String) = LicenseManager(store, LicenseClient(HttpLicenseTransport("http://127.0.0.1:$port$path", 5000), server.publicKey), device, "1.2.0", { now })
             assertEquals(LicenseManager.Result.Ok, m("/exec").login("0501234567", "12345678"))
             assertEquals(LicenseManager.Result.Ok, m("/exec").verify())
             assertTrue((m("/filtered").verify() as LicenseManager.Result.Offline).message.contains("מסונן"))
-            assertEquals(LicenseManager.Result.Offline(LicenseText.network(NetProblem.SERVER_DOWN)), m("/broken").verify())
+            assertEquals(LicenseText.network(NetProblem.SERVER_DOWN), (m("/broken").verify() as LicenseManager.Result.Offline).message)
+            val held = LicenseManager(store, LicenseClient(HttpLicenseTransport("http://127.0.0.1:$port/exec-held", 1000), server.publicKey), device, "1.2.0", { now }).verify()
+                as LicenseManager.Result.Offline
+            assertEquals(LicenseText.network(NetProblem.REPLY_BLOCKED), held.message)
+            assertTrue("detail names the host that did not answer: ${held.detail}", held.detail.contains("SocketTimeoutException @ localhost"))
             http.stop(0)
-            assertEquals(LicenseManager.Result.Offline(LicenseText.network(NetProblem.NO_CONNECTION)), m("/exec").verify())
+            val down = m("/exec").verify() as LicenseManager.Result.Offline
+            assertEquals(LicenseText.network(NetProblem.NO_CONNECTION), down.message)
+            assertTrue(down.detail.contains("@ 127.0.0.1"))
             assertNotNull("still logged in after all failures", store.s)
         } finally {
             http.stop(0)

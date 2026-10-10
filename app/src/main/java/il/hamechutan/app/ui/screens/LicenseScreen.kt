@@ -63,6 +63,9 @@ class LicenseScreen(private val act: MainActivity, private var mode: Mode, priva
         msg.visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
     }
 
+    /** The message plus the technical cause, so a customer can send it to the seller. */
+    private fun withDetail(r: LicenseManager.Result.Offline) = if (r.detail.isBlank()) r.message else "${r.message}\n\n(${r.detail})"
+
     private fun setBusy(btn: TextView, on: Boolean, label: String) {
         busy = on
         btn.text = if (on) "רגע…" else label
@@ -104,7 +107,7 @@ class LicenseScreen(private val act: MainActivity, private var mode: Mode, priva
                             when (val res = r.getOrNull()) {
                                 LicenseManager.Result.Ok -> { ui.toast("ברוכים הבאים!"); onOpen() }
                                 is LicenseManager.Result.Refused -> show(msg, res.message)
-                                is LicenseManager.Result.Offline -> show(msg, res.message)
+                                is LicenseManager.Result.Offline -> show(msg, withDetail(res))
                                 null -> show(msg, "שגיאה: ${r.exceptionOrNull()?.message ?: ""}")
                             }
                         }
@@ -137,7 +140,7 @@ class LicenseScreen(private val act: MainActivity, private var mode: Mode, priva
                         LicenseManager.Result.Ok -> { ui.toast("המנוי אושר"); onOpen() }
                         is LicenseManager.Result.Refused ->
                             if (res.revoked) { mode = Mode.Login(res.message); render() } else show(msg, res.message)
-                        is LicenseManager.Result.Offline -> show(msg, res.message)
+                        is LicenseManager.Result.Offline -> show(msg, withDetail(res))
                         null -> show(msg, "שגיאה: ${r.exceptionOrNull()?.message ?: ""}")
                     }
                 }

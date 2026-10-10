@@ -18,6 +18,17 @@ function chainable(target) {
   return proxy;
 }
 
+/**
+ * Google Sheets interprets written strings like typed input: "0583271424" becomes the number 583271424,
+ * and a leading apostrophe keeps the rest as text. The fake does the same, so tests catch lost zeros.
+ */
+function asEntered(v) {
+  if (typeof v !== 'string') return v;
+  if (v.startsWith("'")) return v.slice(1);
+  if (/^-?\d+(\.\d+)?$/.test(v.trim())) return Number(v);
+  return v;
+}
+
 class FakeSheet {
   constructor(name) { this.name = name; this.rows = []; this.maxRows = 1000; }
   getName() { return this.name; }
@@ -28,9 +39,9 @@ class FakeSheet {
     while (this.rows.length < r) this.rows.push([]);
     const row = this.rows[r - 1];
     while (row.length < c) row.push('');
-    row[c - 1] = v;
+    row[c - 1] = asEntered(v);
   }
-  appendRow(values) { this.rows.push(values.slice()); return this; }
+  appendRow(values) { this.rows.push(values.map(asEntered)); return this; }
   getRange(r, c, nr = 1, nc = 1) {
     const sheet = this;
     return chainable({

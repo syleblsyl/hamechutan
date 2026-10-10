@@ -210,3 +210,27 @@ test('server without a private key refuses to answer', () => {
   const r = plain(env.gs.handleRequest_({ action: 'check', username: 'x', deviceId: 'd', nonce: nonce() }, new Date()));
   assert.equal(r.code, 'not_configured');
 });
+
+test('usernames with a leading zero survive Google Sheets, also rows typed by hand', () => {
+  const t = setup();
+  const c = t.add('058-327 1424');
+  const v = t.rowOf('0583271424').values;
+  assert.equal(v[t.gs.COL.USER - 1], '0583271424', 'stored as text, zero kept');
+  assert.equal(typeof v[t.gs.COL.HASH - 1], 'string');
+  assert.equal(t.activate('0583271424', c.password).ok, true);
+  assert.equal(t.rowOf('0583271424').values[t.gs.COL.DEVICE_ID - 1], 'dev-A');
+  assert.equal(t.rowOf('0583271424').values[t.gs.COL.VERSION - 1], '1.2.0', 'version kept as text');
+
+  // A row whose username Sheets already turned into a number (written before this fix)
+  t.sheet.appendRow(['548562860', 'פעיל', '', '', '', '', '', '', '', '', '']);
+  assert.equal(typeof t.sheet.getRange(t.sheet.getLastRow(), 1).getValue(), 'number');
+  const idx = t.rowOf('0548562860').index;
+  assert.equal(idx, t.sheet.getLastRow(), 'found with or without the leading zero');
+  const fresh = t.gs.resetPassword_(t.sheet, idx);
+  assert.equal(t.activate('0548562860', fresh, 'dev-X').ok, true);
+  assert.equal(t.activate('548562860', fresh, 'dev-X').ok, true);
+  assert.throws(() => t.add('0548562860'), /כבר קיים/, 'no duplicate for the same number');
+  // names that are not only digits are not affected
+  const a = t.add('abc');
+  assert.equal(t.activate('0abc', a.password).code, 'bad_credentials');
+});

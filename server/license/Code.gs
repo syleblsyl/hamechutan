@@ -100,12 +100,12 @@ function handleRequest_(req, now) {
     var bound = String(v[COL.DEVICE_ID - 1] || '').trim();
     if (ctx.action === 'activate') {
       if (bound && bound !== ctx.deviceId) return deny_(ctx, 'other_device');
-      if (!bound) sheet.getRange(row.index, COL.DEVICE_NAME, 1, 3).setValues([[deviceName, ctx.deviceId, now]]);
+      if (!bound) sheet.getRange(row.index, COL.DEVICE_NAME, 1, 3).setValues([[text_(deviceName), text_(ctx.deviceId), now]]);
     } else {
       if (!bound) return deny_(ctx, 'not_activated');
       if (bound !== ctx.deviceId) return deny_(ctx, 'other_device');
     }
-    sheet.getRange(row.index, COL.LAST_SEEN, 1, 2).setValues([[now, appVersion]]);
+    sheet.getRange(row.index, COL.LAST_SEEN, 1, 2).setValues([[now, text_(appVersion)]]);
     return sign_(ctx, { ok: true, code: '', username: ctx.username, expires: formatDate_(v[COL.EXPIRES - 1]) });
   } finally {
     lock.releaseLock();
@@ -231,11 +231,11 @@ function createCustomer_(sheet, rawUsername, notes, now) {
   var salt = newSalt_();
   var row = [];
   for (var i = 0; i < NUM_COLS; i++) row.push('');
-  row[COL.USER - 1] = username;
+  row[COL.USER - 1] = text_(username);
   row[COL.STATUS - 1] = STATUS_ACTIVE;
-  row[COL.NOTES - 1] = String(notes || '').trim();
-  row[COL.HASH - 1] = hashPassword_(password, salt);
-  row[COL.SALT - 1] = salt;
+  row[COL.NOTES - 1] = text_(String(notes || '').trim());
+  row[COL.HASH - 1] = text_(hashPassword_(password, salt));
+  row[COL.SALT - 1] = text_(salt);
   sheet.appendRow(row);
   return { username: username, password: password };
 }
@@ -243,7 +243,7 @@ function createCustomer_(sheet, rawUsername, notes, now) {
 function resetPassword_(sheet, rowIndex) {
   var password = newPassword_();
   var salt = newSalt_();
-  sheet.getRange(rowIndex, COL.HASH, 1, 2).setValues([[hashPassword_(password, salt), salt]]);
+  sheet.getRange(rowIndex, COL.HASH, 1, 2).setValues([[text_(hashPassword_(password, salt)), text_(salt)]]);
   return password;
 }
 
@@ -278,11 +278,27 @@ function customerMessage_(username, password) {
 function findRow_(sheet, username) {
   var last = sheet.getLastRow();
   if (last < 2) return null;
+  var key = userKey_(username);
   var data = sheet.getRange(2, 1, last - 1, NUM_COLS).getValues();
   for (var i = 0; i < data.length; i++) {
-    if (normUser_(data[i][COL.USER - 1]) === username) return { index: i + 2, values: data[i] };
+    if (userKey_(data[i][COL.USER - 1]) === key) return { index: i + 2, values: data[i] };
   }
   return null;
+}
+
+/**
+ * מפתח להשוואת שמות משתמש. בשם שכולו ספרות מתעלמים מאפסים מובילים, כי Google Sheets הופך
+ * "0501234567" שהוקלד ידנית למספר 501234567.
+ */
+function userKey_(u) {
+  var n = normUser_(u);
+  return /^\d+$/.test(n) ? n.replace(/^0+(?=\d)/, '') : n;
+}
+
+/** ערך שייכתב לגיליון כטקסט בדיוק כפי שהוא (גרש בהתחלה = טקסט, כמו בהקלדה ידנית). */
+function text_(v) {
+  var s = String(v == null ? '' : v);
+  return s ? "'" + s : '';
 }
 
 /** אותיות קטנות, בלי רווחים ומקפים: "050-123 4567" ו-"0501234567" הם אותו משתמש. */

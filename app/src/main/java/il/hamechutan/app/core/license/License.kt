@@ -58,6 +58,10 @@ fun interface LicenseTransport {
     fun post(body: String): HttpReply
 }
 
+/** A network failure at [host]; [afterRedirect] = the request reached the server but its answer did not come back. */
+class LicenseNetException(val host: String, val afterRedirect: Boolean, cause: IOException) :
+    IOException("${cause.javaClass.simpleName} @ $host" + (cause.message?.let { ": " + it.take(80) } ?: ""), cause)
+
 /**
  * POSTs to the Apps Script web app. Google answers a POST with "302 Found" pointing to another host
  * (script.googleusercontent.com) that serves the result to a GET, so redirects are followed by hand.
@@ -67,8 +71,8 @@ class HttpLicenseTransport(private val url: String, private val timeoutMs: Int =
         var target = URL(url)
         var method = "POST"
         var payload: ByteArray? = body.toByteArray(Charsets.UTF_8)
-        repeat(MAX_REDIRECTS + 1) {
-            val c = target.openConnection() as HttpURLConnection
+        repeat(MAX_REDIRECTS + 1) { hop ->
+            val c = try { target.openConnection() as HttpURLConnection } catch (e: IOException) { throw LicenseNetException(target.host, hop > 0, e) }
             try {
                 c.instanceFollowRedirects = false
                 c.connectTimeout = timeoutMs
@@ -93,6 +97,10 @@ class HttpLicenseTransport(private val url: String, private val timeoutMs: Int =
                 }
                 val stream = if (status >= 400) c.errorStream else c.inputStream
                 return HttpReply(status, stream?.use { readLimited(it) } ?: "")
+            } catch (e: LicenseNetException) {
+                throw e
+            } catch (e: IOException) {
+                throw LicenseNetException(target.host, hop > 0, e)
             } finally {
                 c.disconnect()
             }
@@ -117,7 +125,7 @@ class HttpLicenseTransport(private val url: String, private val timeoutMs: Int =
     }
 }
 
-enum class NetProblem { NO_CONNECTION, TIMEOUT, BAD_RESPONSE, SERVER_DOWN }
+enum class NetProblem { NO_CONNECTION, TIMEOUT, BAD_RESPONSE, SERVER_DOWN, REPLY_BLOCKED }
 
 sealed class Outcome {
     data class Approved(val username: String, val expires: String, val serverTime: Long) : Outcome()
@@ -147,6 +155,15 @@ class LicenseClient(
         if (password != null) req.put("password", password)
         val reply = try {
             transport.post(req.toString())
+        } catch (e: LicenseNetException) {
+            val cause = e.cause
+            val problem = when {
+                cause is SSLException -> NetProblem.BAD_RESPONSE
+                e.afterRedirect -> NetProblem.REPLY_BLOCKED
+                cause is SocketTimeoutException -> NetProblem.TIMEOUT
+                else -> NetProblem.NO_CONNECTION
+            }
+            return Outcome.Unreachable(problem, e.message ?: e.toString())
         } catch (e: SocketTimeoutException) {
             return Outcome.Unreachable(NetProblem.TIMEOUT, e.toString())
         } catch (e: SSLException) {
@@ -232,7 +249,7 @@ class LicenseManager(
         /** The server refused. [revoked]: the stored license was removed; show the login screen. */
         data class Refused(val message: String, val revoked: Boolean) : Result()
         /** The server could not be reached or its answer could not be trusted; nothing changed. */
-        data class Offline(val message: String) : Result()
+        data class Offline(val message: String, val detail: String = "") : Result()
     }
 
     fun state(): LicenseState? = store.load()
@@ -274,7 +291,7 @@ class LicenseManager(
                 Result.Ok
             }
             is Outcome.Denied -> Result.Refused(LicenseText.denial(o.code), false)
-            is Outcome.Unreachable -> Result.Offline(LicenseText.network(o.problem))
+            is Outcome.Unreachable -> Result.Offline(LicenseText.network(o.problem), o.detail)
         }
     }
 
@@ -296,7 +313,7 @@ class LicenseManager(
             } else {
                 Result.Offline(LicenseText.denial(o.code))
             }
-            is Outcome.Unreachable -> Result.Offline(LicenseText.network(o.problem))
+            is Outcome.Unreachable -> Result.Offline(LicenseText.network(o.problem), o.detail)
         }
     }
 
@@ -340,6 +357,8 @@ object LicenseText {
         NetProblem.NO_CONNECTION -> "אין חיבור לאינטרנט. התחברו לרשת ונסו שוב."
         NetProblem.TIMEOUT -> "השרת לא הגיב בזמן. נסו שוב."
         NetProblem.SERVER_DOWN -> "שרת המנויים אינו זמין כרגע. נסו שוב מאוחר יותר."
+        NetProblem.REPLY_BLOCKED -> "הבקשה הגיעה לשרת, אבל התשובה לא הגיעה לטלפון. אם יש לכם אינטרנט מסונן, " +
+            "בקשו מחברת הסינון לאשר את הכתובת script.googleusercontent.com."
         NetProblem.BAD_RESPONSE -> "לא התקבלה תשובה תקינה משרת המנויים. אם יש לכם אינטרנט מסונן, " +
             "בקשו מחברת הסינון לאשר את הכתובות script.google.com ו-script.googleusercontent.com."
     }
