@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import il.hamechutan.app.R
 import il.hamechutan.app.core.license.LicenseManager
+import il.hamechutan.app.core.license.Support
 import il.hamechutan.app.ui.*
 
 /**
@@ -61,6 +62,11 @@ class LicenseScreen(private val act: MainActivity, private var mode: Mode, priva
         msg.text = text ?: ""
         msg.setTextColor(color)
         msg.visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
+    }
+
+    /** "Questions? WhatsApp us" — opens a WhatsApp chat with the seller. */
+    private fun supportButton(): TextView = ui.button("לבירורים: וואטסאפ ${Support.DISPLAY}", BtnKind.TEXT, R.drawable.ic_whatsapp, small = true) {
+        act.whatsapp(Support.PHONE)
     }
 
     /** The message plus the technical cause, so a customer can send it to the seller. */
@@ -122,6 +128,7 @@ class LicenseScreen(private val act: MainActivity, private var mode: Mode, priva
 
         root.addView(centered(ui.tv("החשבון פעיל בטלפון אחד בלבד.\nהטלפון הזה: ${lic.deviceName}", TS.CAPTION, p.text2)), ui.lp(top = 6))
         root.addView(centered(ui.tv("פרטי הכניסה נמסרים עם רכישת האפליקציה. נתוני החתונה נשמרים רק בטלפון ואינם נשלחים לשום מקום.", TS.SMALL, p.text3)), ui.lp(top = 10))
+        root.addView(supportButton(), ui.lp(WRAP, WRAP, top = 8, gravity = Gravity.CENTER_HORIZONTAL))
     }
 
     private fun verify(root: LinearLayout, m: Mode.Verify) {
@@ -151,6 +158,7 @@ class LicenseScreen(private val act: MainActivity, private var mode: Mode, priva
         lic.state()?.let { s ->
             root.addView(centered(ui.tv("שם משתמש: ${s.username}\nהטלפון הזה: ${lic.deviceName}", TS.CAPTION, p.text2)), ui.lp(top = 16))
         }
+        root.addView(supportButton(), ui.lp(WRAP, WRAP, top = 8, gravity = Gravity.CENTER_HORIZONTAL))
         if (!autoChecked) { autoChecked = true; act.app.main.post { check() } }
     }
 }

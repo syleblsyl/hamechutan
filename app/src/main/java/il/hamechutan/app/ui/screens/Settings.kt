@@ -153,6 +153,9 @@ class SettingsScreen(act: MainActivity) : Screen(act) {
             app.updater.available()?.let { UpdateFlows.showAvailable(act, it) } ?: UpdateFlows.checkNow(act)
         }, ui.lp(WRAP, WRAP, top = 4, bottom = 6))
         about.addView(ui.kv("מכשיר", "Android ${Build.VERSION.RELEASE} · API ${Build.VERSION.SDK_INT}"))
+        about.addView(ui.button("פניות והערות: וואטסאפ ${il.hamechutan.app.core.license.Support.DISPLAY}", BtnKind.TEXT, R.drawable.ic_whatsapp, small = true) {
+            act.whatsapp(il.hamechutan.app.core.license.Support.PHONE)
+        }, ui.lp(WRAP, WRAP, bottom = 4))
         about.addView(ui.kv("ספקים / הוצאות / משימות", "${repo.suppliers().size} / ${repo.expenses().size} / ${repo.tasks().size}"))
         about.addView(ui.kv("מסמכים", "${repo.documents().size}"))
         about.addView(ui.tv(if (app.license.enabled) "כל נתוני החתונה נשמרים במכשיר בלבד ואינם נשלחים לשום מקום. החיבור לאינטרנט משמש רק לבדיקת המנוי ולבדיקת עדכונים."

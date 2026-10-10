@@ -332,11 +332,18 @@ class LicenseManager(
     }
 }
 
+/** Where customers turn for help (shown on the login screen, in messages and in Settings, with a WhatsApp link). */
+object Support {
+    const val PHONE = "0548562860"
+    const val DISPLAY = "054-856-2860"
+    const val WHATSAPP_LINE = "בוואטסאפ $DISPLAY"
+}
+
 /** User-facing texts (Hebrew, plural address). */
 object LicenseText {
     const val MISSING_FIELDS = "יש להזין שם משתמש וסיסמה."
-    const val MOVED_DEVICE = "פרטי הכניסה שמורים לטלפון אחר. התחברו מחדש."
-    const val CLOCK_CHANGED = "השעון בטלפון שונה. כדי להמשיך, התחברו לאינטרנט לבדיקת המנוי. הנתונים שלכם שמורים."
+    const val MOVED_DEVICE = "האפליקציה עברה לטלפון אחר, ולכן צריך להיכנס שוב. הקלידו שם משתמש וסיסמה."
+    const val CLOCK_CHANGED = "התאריך או השעה בטלפון השתנו. כדי להמשיך, התחברו לאינטרנט לבדיקה קצרה. הנתונים שלכם שמורים."
     const val EXPIRY_PASSED = "תאריך תוקף המנוי עבר. התחברו לאינטרנט כדי לבדוק אם הוא חודש. הנתונים שלכם שמורים."
 
     fun offlineTooLong(days: Int) =
@@ -345,12 +352,12 @@ object LicenseText {
     fun denial(code: String): String = when (code) {
         "bad_credentials" -> "שם המשתמש או הסיסמה שגויים."
         "rate_limited" -> "יותר מדי ניסיונות שגויים. נסו שוב בעוד רבע שעה."
-        "blocked" -> "החשבון חסום. לפרטים פנו למוכר."
-        "expired" -> "תוקף המנוי הסתיים. לחידוש פנו למוכר."
-        "other_device" -> "החשבון כבר פעיל בטלפון אחר. כדי לעבור לטלפון הזה, פנו למוכר ובקשו לשחרר את הטלפון הקודם."
-        "not_activated" -> "החשבון נותק מהטלפון הזה. כדי להמשיך, התחברו שוב."
-        "unknown_user" -> "החשבון לא נמצא. לפרטים פנו למוכר."
-        else -> "שרת המנויים החזיר שגיאה. נסו שוב מאוחר יותר."
+        "blocked" -> "החשבון אינו פעיל כרגע. לבירור פנו אלינו ${Support.WHATSAPP_LINE}. נתוני החתונה שמורים בטלפון."
+        "expired" -> "תקופת המנוי הסתיימה. לחידוש פנו אלינו ${Support.WHATSAPP_LINE}. כל הנתונים שמורים ומחכים לכם."
+        "other_device" -> "החשבון כבר פעיל בטלפון אחר. כדי לעבור לטלפון הזה, פנו אלינו ${Support.WHATSAPP_LINE} ונשחרר את הטלפון הקודם."
+        "not_activated" -> "החשבון נותק מהטלפון הזה. כדי להמשיך, היכנסו שוב."
+        "unknown_user" -> "שם המשתמש לא נמצא. בדקו שהוקלד נכון, או פנו אלינו ${Support.WHATSAPP_LINE}."
+        else -> "בדיקת המנוי לא הושלמה. נסו שוב מאוחר יותר."
     }
 
     fun network(p: NetProblem): String = when (p) {
