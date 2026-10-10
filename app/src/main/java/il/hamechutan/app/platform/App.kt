@@ -21,6 +21,7 @@ class App : Application() {
     lateinit var prefs: Prefs
     lateinit var pin: PinManager
     lateinit var license: LicenseManager
+    lateinit var updater: Updater
 
     /** Background thread for heavy work (backup, restore, PDF, image processing). */
     val io: ExecutorService = Executors.newSingleThreadExecutor()
@@ -35,6 +36,7 @@ class App : Application() {
         files = DocFiles(this)
         pin = PinManager(getSharedPreferences("security", Context.MODE_PRIVATE))
         license = LicenseSetup.create(this, VERSION_NAME)
+        updater = Updater(this, files)
         scheduler = ReminderScheduler(this)
         Notifier.ensureChannel(this)
         repo.onChange = { scheduler.sync() } // synchronous so shown reminder status is always current

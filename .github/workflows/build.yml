@@ -78,20 +78,21 @@ jobs:
       - name: Publish release for a new version
         if: github.ref == 'refs/heads/main'
         env:
-          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          OWN_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$GH_TOKEN" ]; then
-            echo "::error title=Releases::Repository secret RELEASES_TOKEN is not set (see README: publishing)."
-            exit 1
-          fi
+          # Until the public downloads repository is set up (secret RELEASES_TOKEN), publish here.
+          # The app checks both repositories for updates.
+          if [ -n "$RELEASES_TOKEN" ]; then export GH_TOKEN="$RELEASES_TOKEN"; REPO="$RELEASES_REPO"
+          else echo "::warning title=Releases::RELEASES_TOKEN not set; publishing in $GITHUB_REPOSITORY"; export GH_TOKEN="$OWN_TOKEN"; REPO="$GITHUB_REPOSITORY"; fi
           V=$(grep '^versionName=' version.properties | cut -d= -f2 | tr -d '[:space:]')
-          if gh release view "v$V" -R "$RELEASES_REPO" >/dev/null 2>&1; then
-            echo "Release v$V already exists in $RELEASES_REPO — bump version.properties to publish a new one."
+          if gh release view "v$V" -R "$REPO" >/dev/null 2>&1; then
+            echo "Release v$V already exists in $REPO — bump version.properties to publish a new one."
             exit 0
           fi
           awk -v v="$V" '$0 ~ "^## "v {f=1; next} /^## / {f=0} f' CHANGELOG.md > notes.md
           [ -s notes.md ] || echo "גרסה $V" > notes.md
-          ./tools/ci-step.sh "Publish" gh release create "v$V" "build/outputs/HaMechutan-$V.apk" -R "$RELEASES_REPO" \
+          ./tools/ci-step.sh "Publish" gh release create "v$V" "build/outputs/HaMechutan-$V.apk" -R "$REPO" \
             --title "המחותן $V" --notes-file notes.md
 
       - name: Remove signing key

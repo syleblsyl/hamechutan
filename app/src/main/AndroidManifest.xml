@@ -7,8 +7,10 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- Internet is used ONLY for the subscription check (username + device id). Wedding data never leaves the phone. -->
+    <!-- Internet is used ONLY for the subscription check (username + device id) and the update check (GitHub). Wedding data never leaves the phone. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- App updates: the downloaded, signature-checked APK is handed to Android's installer. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <queries>
         <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>

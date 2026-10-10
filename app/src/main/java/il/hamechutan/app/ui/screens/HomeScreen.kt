@@ -25,6 +25,9 @@ class HomeScreen(act: MainActivity) : Screen(act) {
         header(c, d)
 
         if (d.isEmpty && !app.prefs.welcomeDismissed) welcome(c)
+        app.updater.available()?.takeIf { !app.updater.isDismissed(it) }?.let { u ->
+            c.addView(ui.banner("גרסה חדשה של המחותן זמינה: ${u.versionName}", Tone.INFO, R.drawable.ic_info, "לפרטים ולהתקנה") { UpdateFlows.showAvailable(act, u) })
+        }
         if (act.crashReportPending()) c.addView(ui.banner("האפליקציה נסגרה באופן לא צפוי בפעם הקודמת. אפשר לשתף את פרטי התקלה מתוך ההגדרות.", Tone.WARNING, R.drawable.ic_warning, "פתיחת ההגדרות") { push(SettingsScreen(act)) })
 
         val overdue = d.buckets[TaskBucket.OVERDUE].orEmpty()

@@ -148,10 +148,14 @@ class SettingsScreen(act: MainActivity) : Screen(act) {
         c.addView(ui.sectionHeader("אודות"))
         val about = ui.card()
         about.addView(ui.kv("גרסה", "${App.VERSION_NAME} (${App.VERSION_CODE})"))
+        app.updater.available()?.let { u -> about.addView(ui.kv("גרסה חדשה זמינה", u.versionName, p.info, strong = true)) }
+        about.addView(ui.button(if (app.updater.available() != null) "להתקנת הגרסה החדשה" else "בדיקת עדכונים", BtnKind.TONAL, R.drawable.ic_backup, small = true) {
+            app.updater.available()?.let { UpdateFlows.showAvailable(act, it) } ?: UpdateFlows.checkNow(act)
+        }, ui.lp(WRAP, WRAP, top = 4, bottom = 6))
         about.addView(ui.kv("מכשיר", "Android ${Build.VERSION.RELEASE} · API ${Build.VERSION.SDK_INT}"))
         about.addView(ui.kv("ספקים / הוצאות / משימות", "${repo.suppliers().size} / ${repo.expenses().size} / ${repo.tasks().size}"))
         about.addView(ui.kv("מסמכים", "${repo.documents().size}"))
-        about.addView(ui.tv(if (app.license.enabled) "כל נתוני החתונה נשמרים במכשיר בלבד ואינם נשלחים לשום מקום. החיבור לאינטרנט משמש רק לבדיקת המנוי."
+        about.addView(ui.tv(if (app.license.enabled) "כל נתוני החתונה נשמרים במכשיר בלבד ואינם נשלחים לשום מקום. החיבור לאינטרנט משמש רק לבדיקת המנוי ולבדיקת עדכונים."
             else "כל המידע נשמר במכשיר בלבד.", TS.SMALL, p.text3), ui.lp(top = 6))
         about.addView(ui.tv("גופן: Heebo (רישיון SIL Open Font License).", TS.SMALL, p.text3), ui.lp(top = 2))
         c.addView(about)

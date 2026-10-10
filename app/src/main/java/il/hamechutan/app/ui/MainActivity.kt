@@ -295,6 +295,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         app.scheduler.requestSync()
+        if (!isLocked) UpdateFlows.resumePending(this)
     }
 
     override fun onStop() {
@@ -336,6 +337,7 @@ class MainActivity : Activity() {
             is LicenseManager.Gate.Open -> {
                 if (licenseView != null) closeLicense()
                 if (app.license.needsRefresh()) refreshLicenseInBackground()
+                checkForUpdateInBackground()
             }
             is LicenseManager.Gate.Login -> showLicense(LicenseScreen.Mode.Login(g.notice))
             is LicenseManager.Gate.Verify -> showLicense(LicenseScreen.Mode.Verify(g.reason))
@@ -355,6 +357,18 @@ class MainActivity : Activity() {
         licenseView = null
         refresh()
         openPendingIfUnlocked()
+    }
+
+    private var updateCheckRunning = false
+
+    /** Once a day: asks GitHub for a newer version; the home screen then shows a banner. */
+    private fun checkForUpdateInBackground() {
+        if (updateCheckRunning || !app.updater.shouldAutoCheck()) return
+        updateCheckRunning = true
+        app.background({ app.updater.check() }) { r ->
+            updateCheckRunning = false
+            if (r.getOrNull() is il.hamechutan.app.core.update.CheckResult.Available && stack.size == 1 && currentTab == Tab.HOME) refresh()
+        }
     }
 
     private fun refreshLicenseInBackground() {
