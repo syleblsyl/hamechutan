@@ -7,6 +7,6 @@ package il.hamechutan.app.platform
  * Both empty = a development build without licensing. Release builds in CI refuse to build that way.
  */
 object LicenseConfig {
-    const val SERVER_URL = ""
+    const val SERVER_URL = "https://script.google.com/macros/s/AKfycbxxZCN0GWAMKMVQeZYlHjA7LlTBhnfUPdYxNiS0KlnrPyjPyQBqxOgeE4rUIQ5G6fc4/exec"
     const val PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo4dKJFMYPST+tEOInDWjgMBIdo+7GbaIJ3WZ5kIznXaQfV2210piyD1MqBT3imC1lJerh7ylvEjdFxUZoZ0936268RjGap1RCPQkXtP3BrBPzTcQV8B6qh5SC8zShZSWjGcpJTgmmKE+VZSOESsy1/SHKh1UbsvHyDN7KJ3HzorgXXe3cfizQXbRgYNCgT5DDMMbXOirJts5U+JECyd7Sgz0llcJn7XairCN+6kUxqW2KZfM24hChSKJTBDyIzsGrXPEsXAR0/9t5OOM4/bLKvIhY8H6DY6+l1mtMcYhayElhFgfsqAaC44pgfcnF6yCvMUiG5BB5t/0scH/l21uFQIDAQAB"
 }

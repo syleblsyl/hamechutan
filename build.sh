@@ -86,7 +86,10 @@ apksigner sign --ks "$KS_DIR/release.jks" --ks-key-alias hamechutan --ks-pass "f
   --out "$APK" "$OUT/aligned.apk" 2>&1 | quiet
 
 echo "== 7/7 verify"
-apksigner verify --verbose "$APK" 2>&1 | quiet | head -5
-"$AAPT2" dump badging "$APK" | head -4
+# Write to files first: piping straight into `head` can kill the producer with SIGPIPE (exit 141 under pipefail).
+apksigner verify --verbose "$APK" > "$OUT/verify.txt" 2>&1
+quiet < "$OUT/verify.txt" | sed -n 1,5p
+"$AAPT2" dump badging "$APK" > "$OUT/badging.txt"
+sed -n 1,4p "$OUT/badging.txt"
 ls -la "$APK"
 echo "OK: $APK"
